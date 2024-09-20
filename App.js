@@ -1,4 +1,5 @@
-import { StyleSheet, View, SafeAreaView, StatusBar } from 'react-native';
+import { useEffect, useState, createRef } from 'react';
+import { StyleSheet, SafeAreaView, StatusBar, BackHandler } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Linking } from 'react-native';
 
@@ -6,17 +7,23 @@ export default function App() {
 
     const handleNavigation = (navigator) => {
         const url = navigator.url;
-        console.log('\n\n' + url);
-        const allowedExceptions = [
-            'https://maps.google.com/', // permitir abrir maps en el navegador
-            'https://drive.google.com', // permitir abrir drive en el navegador
+        console.log(url);
+
+        const alloweds = [ // Sitios permitidos desde la app
+            'http://telemetriatest.dmdcompresores.com:3000',
+            'https://solucionesdmd.com/',
+            'https://www.solucionesdmd.com/',
         ];
 
-        // console.log('Excepción:', allowedExceptions[0]);
+        const allowedExceptions = [ // Sitios los cuales puede derivar al navegador u otra app
+            'https://www.facebook.com/',
+            'https://www.instagram.com/',
+            'https://www.linkedin.com/'
+        ];
 
-        if (url.startsWith('https://www.google.com')) {
-            console.log('Pertenece al dominio google.com');
-            return true; // permitir cargar URLs dentro del dominio google.com
+        if (alloweds.some((allowed) => url.startsWith(allowed))) {
+            console.log('Esta permitida dentro de la app');
+            return true; // permitir que se cargue en el WebView
         } else if (allowedExceptions.some((exception) => url.startsWith(exception))) {
             console.log('Es una excepción');
             Linking.openURL(url); // abrir excepciones en el navegador
@@ -27,13 +34,31 @@ export default function App() {
         }
     };
 
+    /// RETROCEDER con el btn nativo del dispositivo
+    const [canGoBack, setCanGoBack] = useState(false);
+    const webviewRef = createRef();
+
+    const handleNavigationStateChange = (navState) => {
+        setCanGoBack(navState.canGoBack);
+    };
+
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            if (canGoBack) {
+                webviewRef.current.goBack();
+                return true;
+            }
+        });
+        return () => backHandler.remove();
+    }, [canGoBack]);
+
     return (
         <SafeAreaView style={{ flex: 1, marginTop: StatusBar.currentHeight }}>
             <WebView
+                ref={webviewRef}
                 style={styles.container}
-                // originWhitelist={['https://www.google.com']}
-                // originWhitelist={['*']}
-                source={{ uri: 'https://www.google.com' }}
+                source={{ uri: 'http://telemetriatest.dmdcompresores.com:3000/login' }}
+                onNavigationStateChange={handleNavigationStateChange}
                 onShouldStartLoadWithRequest={handleNavigation}
             />
         </SafeAreaView>
